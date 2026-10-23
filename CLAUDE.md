@@ -21,6 +21,7 @@ code or history: confirm or delete. `Hint:` is a working note for Claude.
 - `CONFIG/` and `DATA/` (and `HOME/`) expand only at the start of a line.
 - `[group]` headers in the file; switches in the spec's `opts.groups`: a boolean or a function returning one.
 - harpoon-like parts: `<M-1>`…`<M-4>` jump to the first four entries (file order); use counts in `stdpath('data')/startdirs.usage` rank the mydirs picker.
+- Ranking is frecency: count x recency weight (genja-recent's weights, copied, not required); the usage file keeps the last-use time.
 - Keys (config): `<leader>s…` and `<leader>jA`/`je`/`jD`; oil `,s`/`,S` add/remove under `[oil]`.
 - Plain text file, not JSON: easy to edit by hand. (inferred from the choice of format)
 - The plugin must not require `genja.*`; mappings and the picker stay in the config. (inferred, as in the other plug-wip plugins)

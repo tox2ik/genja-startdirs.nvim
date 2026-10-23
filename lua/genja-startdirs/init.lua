@@ -217,55 +217,96 @@ end
 
 -- {{{ usage ranking
 
----@return table<string, integer> key -> count
-local function read_usage()
-	local file = M.config.usage_file
-	local counts = {}
-	if not file or vim.fn.filereadable(file) == 0 then
-		return counts
+---@class genja-startdirs.Usage
+---@field count integer
+---@field last integer unix time of the last use; 0 for old lines without one
+
+-- Recency weight, zoxide style (same weights as genja-recent's frecency, copied so the
+-- plugins stay apart): x4 within an hour, x2 within a day, x0.5 within a week, x0.25 older.
+local HOUR = 3600
+local DAY = 24 * HOUR
+local WEEK = 7 * DAY
+
+---@param age number seconds since the last use
+---@return number
+local function recency(age)
+	if age < HOUR then
+		return 4
 	end
-	for _, line in ipairs(vim.fn.readfile(file)) do
-		local n, path = line:match('^(%d+)\t(.+)$')
-		if n then
-			counts[same_key(path)] = tonumber(n)
-		end
+	if age < DAY then
+		return 2
 	end
-	return counts
+	if age < WEEK then
+		return 0.5
+	end
+	return 0.25
 end
 
---- Count one use of `path` (a cd from the picker or a jump).
+-- Lines: `count<TAB>last<TAB>path`; older `count<TAB>path` lines still read (last = 0).
+---@return table<string, genja-startdirs.Usage> key -> usage
+local function read_usage()
+	local file = M.config.usage_file
+	local usage = {}
+	if not file or vim.fn.filereadable(file) == 0 then
+		return usage
+	end
+	for _, line in ipairs(vim.fn.readfile(file)) do
+		local n, last, path = line:match('^(%d+)	(%d+)	(.+)$')
+		if not n then
+			last = '0'
+			n, path = line:match('^(%d+)	(.+)$')
+		end
+		if n then
+			usage[same_key(path)] = { count = tonumber(n), last = tonumber(last) }
+		end
+	end
+	return usage
+end
+
+--- Count one use of `path` (a cd from the picker or a jump) and stamp the time.
 ---@param path string
 function M.touch(path)
 	local file = M.config.usage_file
 	if not file then
 		return
 	end
-	local counts = read_usage()
+	local usage = read_usage()
 	local key = same_key(M.normalize(path))
-	counts[key] = (counts[key] or 0) + 1
+	local u = usage[key]
+	if u == nil then
+		u = { count = 0, last = 0 }
+		usage[key] = u
+	end
+	u.count = u.count + 1
+	u.last = os.time()
 	local lines = {}
-	for k, n in pairs(counts) do
-		table.insert(lines, n .. '\t' .. k)
+	for k, v in pairs(usage) do
+		table.insert(lines, v.count .. '	' .. v.last .. '	' .. k)
 	end
 	table.sort(lines)
 	vim.fn.mkdir(vim.fs.dirname(file), 'p')
 	vim.fn.writefile(lines, file)
 end
 
---- dirs() sorted by use count, most used first; ties keep file order.
+--- dirs() sorted by frecency (use count x recency weight), highest first; ties keep file order.
 ---@return string[]
 function M.ranked()
-	local counts = read_usage()
+	local usage = read_usage()
+	local now = os.time()
 	local list = M.dirs()
 	local order = {}
+	local score = {}
 	for i, p in ipairs(list) do
 		order[p] = i
+		score[p] = 0
+		local u = usage[same_key(p)]
+		if u then
+			score[p] = u.count * recency(now - u.last)
+		end
 	end
 	table.sort(list, function(a, b)
-		local ca = counts[same_key(a)] or 0
-		local cb = counts[same_key(b)] or 0
-		if ca ~= cb then
-			return ca > cb
+		if score[a] ~= score[b] then
+			return score[a] > score[b]
 		end
 		return order[a] < order[b]
 	end)

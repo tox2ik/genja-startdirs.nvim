@@ -4,7 +4,7 @@
 CONTENTS                                              *genja-startdirs*
 
 A list of start directories: a text file plus `opts.dirs`, group switches,
-add/remove, jumps to the first entries, a use-count ranking.
+add/remove, jumps to the first entries, a frecency ranking.
 
 ==============================================================================
 SETUP                                           *genja-startdirs-setup*
@@ -23,7 +23,8 @@ file            (string) The text file.
 add_group       (string) Group that |genja-startdirs.add()| appends to.
 groups          (table<string, boolean|fun():boolean>) `[group]` switches;
                 a function runs each time the list is read. Missing: on.
-usage_file      (string|false) Use counts for ranked(); false: off.
+usage_file      (string|false) Use counts and last-use times for ranked();
+                false: off. Lines: count<Tab>unix time<Tab>path.
 
 ==============================================================================
 FILE                                             *genja-startdirs-file*
@@ -37,7 +38,8 @@ FUNCTIONS                                   *genja-startdirs-functions*
 
 dirs()              Paths, file order, then opts.dirs.
 entries()           The same with `group` and `from`.
-ranked()            By use count, most used first.
+ranked()            By frecency: count x4 (< 1 h), x2 (< 1 day),
+                    x0.5 (< 1 week), x0.25 older.
 touch({path})       Count one use.
 go({path})          :cd and :edit the dir, count a use.
 jump({n})           go() to the n-th entry of dirs().

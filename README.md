@@ -2,7 +2,7 @@
 
 A list of start directories: a plain text file plus a few dirs from setup,
 with group switches, add/remove from the editor, jumps to the first entries
-and a use-count ranking for pickers. No picker of its own; callers get the
+and a frecency ranking (use count x recency) for pickers. No picker of its own; callers get the
 list from `dirs()` / `ranked()`.
 
 ## Setup
@@ -46,8 +46,8 @@ C:/Games
 |---|---|
 | `dirs()` | paths: the file's entries (switched-on groups), then `opts.dirs` |
 | `entries()` | the same with `group` and `from` (`file`/`opts`) |
-| `ranked()` | `dirs()` by use count, most used first; ties keep file order |
-| `touch(path)` | count one use |
+| `ranked()` | `dirs()` by frecency: use count x4 (last use < 1 h), x2 (< 1 day), x0.5 (< 1 week), x0.25 older; ties keep file order |
+| `touch(path)` | count one use, stamp the time |
 | `go(path)` | `:cd`, `:edit` the dir, `touch` |
 | `jump(n)` | `go` to the n-th entry of `dirs()` |
 | `add(path, group?)` / `remove(path)` | change the file |
