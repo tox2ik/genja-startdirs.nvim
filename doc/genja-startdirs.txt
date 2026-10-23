@@ -1,0 +1,56 @@
+*genja-startdirs.txt*	Start directories from a text file
+
+==============================================================================
+CONTENTS                                              *genja-startdirs*
+
+A list of start directories: a text file plus `opts.dirs`, group switches,
+add/remove, jumps to the first entries, a use-count ranking.
+
+==============================================================================
+SETUP                                           *genja-startdirs-setup*
+
+>lua
+    require('genja-startdirs').setup({
+        dirs = { '~', vim.fn.stdpath('config') },
+        file = vim.fn.stdpath('config') .. '/startdirs.txt',
+        add_group = 'added',
+        groups = { games = false },
+        usage_file = vim.fn.stdpath('data') .. '/startdirs.usage',
+    })
+<
+dirs            (string[]) Always listed, after the file's entries.
+file            (string) The text file.
+add_group       (string) Group that |genja-startdirs.add()| appends to.
+groups          (table<string, boolean|fun():boolean>) `[group]` switches;
+                a function runs each time the list is read. Missing: on.
+usage_file      (string|false) Use counts for ranked(); false: off.
+
+==============================================================================
+FILE                                             *genja-startdirs-file*
+
+One directory per line. `#` comments and blank lines are skipped. `[name]`
+starts a group. `CONFIG`, `DATA`, `HOME` expand at the start of a line only.
+`oil://` is stripped. Missing dirs and duplicates are left out.
+
+==============================================================================
+FUNCTIONS                                   *genja-startdirs-functions*
+
+dirs()              Paths, file order, then opts.dirs.
+entries()           The same with `group` and `from`.
+ranked()            By use count, most used first.
+touch({path})       Count one use.
+go({path})          :cd and :edit the dir, count a use.
+jump({n})           go() to the n-th entry of dirs().
+add({path}, {group})                              *genja-startdirs.add()*
+                    Append under [group] (default add_group).
+remove({path})      Drop the file's lines for path.
+edit()              Open the file.
+
+==============================================================================
+COMMANDS                                     *genja-startdirs-commands*
+
+:StartdirsEdit              Open the file.
+:StartdirsAdd [dir]         Add dir (default: cwd).
+:StartdirsRemove [dir]      Remove dir (default: cwd).
+
+ vim:tw=78:ts=8:ft=help:norl:
