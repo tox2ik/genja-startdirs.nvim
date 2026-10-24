@@ -1,5 +1,5 @@
 -- genja-startdirs: a list of start directories from a plain text file plus setup opts,
--- with group switches, add/remove/edit, jumps to the first entries and a usage ranking.
+-- with group switches, add/remove/edit, jumps to the most used entries and a usage ranking.
 -- File format and options: README.md, doc/genja-startdirs.txt.
 local SRC = 'genja-startdirs/init.lua: '
 
@@ -263,7 +263,7 @@ local function read_usage()
 	return usage
 end
 
---- Count one use of `path` (a cd from the picker or a jump) and stamp the time.
+--- Count one use of `path` (a cd from the picker; jumps don't count) and stamp the time.
 ---@param path string
 function M.touch(path)
 	local file = M.config.usage_file
@@ -286,6 +286,20 @@ function M.touch(path)
 	table.sort(lines)
 	vim.fn.mkdir(vim.fs.dirname(file), 'p')
 	vim.fn.writefile(lines, file)
+end
+
+--- Delete the usage file: every use count and last-use time; ranked() falls back to file order.
+function M.reset_usage()
+	local file = M.config.usage_file
+	if not file or vim.fn.filereadable(file) == 0 then
+		vim.notify(SRC .. 'no usage file to delete')
+		return
+	end
+	if vim.fn.delete(file) ~= 0 then
+		vim.notify(SRC .. 'could not delete ' .. file, vim.log.levels.ERROR)
+		return
+	end
+	vim.notify(SRC .. 'deleted ' .. file)
 end
 
 --- dirs() sorted by frecency (use count x recency weight), highest first; ties keep file order.
@@ -404,23 +418,30 @@ end
 
 -- {{{ jump
 
---- cd to the n-th entry (file order) and open it (oil shows directories), counting a use.
+--- cd to `path` and open it (oil shows directories).
+---@param path string
+local function open_dir(path)
+	vim.cmd.chdir(vim.fn.fnameescape(path))
+	vim.cmd.edit(vim.fn.fnameescape(path))
+end
+
+--- cd to the n-th entry of ranked() (most used first) and open it.
+--- Not counted as a use: counting would reorder the slots the keys point at.
 ---@param n integer
 function M.jump(n)
-	local list = M.dirs()
+	local list = M.ranked()
 	local path = list[n]
 	if not path then
 		vim.notify(SRC .. 'no start dir #' .. n .. ' (' .. #list .. ' listed)')
 		return
 	end
-	M.go(path)
+	open_dir(path)
 end
 
 --- cd to `path`, open it, count a use.
 ---@param path string
 function M.go(path)
-	vim.cmd.chdir(vim.fn.fnameescape(path))
-	vim.cmd.edit(vim.fn.fnameescape(path))
+	open_dir(path)
 	M.touch(path)
 end
 -- }}}

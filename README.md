@@ -1,7 +1,7 @@
 # genja-startdirs.nvim
 
 A list of start directories: a plain text file plus a few dirs from setup,
-with group switches, add/remove from the editor, jumps to the first entries
+with group switches, add/remove from the editor, jumps to the most used entries
 and a frecency ranking (use count x recency) for pickers. No picker of its own; callers get the
 list from `dirs()` / `ranked()`.
 
@@ -48,8 +48,9 @@ C:/Games
 | `entries()` | the same with `group` and `from` (`file`/`opts`) |
 | `ranked()` | `dirs()` by frecency: use count x4 (last use < 1 h), x2 (< 1 day), x0.5 (< 1 week), x0.25 older; ties keep file order |
 | `touch(path)` | count one use, stamp the time |
+| `reset_usage()` | delete the usage file (all counts) |
 | `go(path)` | `:cd`, `:edit` the dir, `touch` |
-| `jump(n)` | `go` to the n-th entry of `dirs()` |
+| `jump(n)` | cd and open the n-th entry of `ranked()` (most used first); not counted as a use |
 | `add(path, group?)` / `remove(path)` | change the file |
 | `edit()` | open the file |
 | `normalize(path)` | expand prefixes, forward slashes, strip `oil://` |

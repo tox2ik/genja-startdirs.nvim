@@ -20,7 +20,9 @@ code or history: confirm or delete. `Hint:` is a working note for Claude.
 - The config's file: `lua/genja/local/startdirs.txt`, gitignored; `startdirs.example.txt` next to it.
 - `CONFIG/` and `DATA/` (and `HOME/`) expand only at the start of a line.
 - `[group]` headers in the file; switches in the spec's `opts.groups`: a boolean or a function returning one.
-- harpoon-like parts: `<M-1>`…`<M-4>` jump to the first four entries (file order); use counts in `stdpath('data')/startdirs.usage` rank the mydirs picker.
+- harpoon-like parts: `<M-1>`…`<M-4>` jump to the four most used entries (`ranked()`, same order as the mydirs picker); use counts in `stdpath('data')/startdirs.usage`. Was file order before 2026-10.
+- `:Mydirs` (picker) and `:Mydirs reset` (`reset_usage()`, deletes the usage file) are defined in the config's spec `config`, since the picker lives in the config.
+- Jumps don't count as a use; only picker picks (`go()`) do, so the `<M-n>` slots don't reorder themselves.
 - Ranking is frecency: count x recency weight (genja-recent's weights, copied, not required); the usage file keeps the last-use time.
 - Keys (config): `<leader>s…` and `<leader>jA`/`je`/`jD`; oil `,s`/`,S` add/remove under `[oil]`.
 - Plain text file, not JSON: easy to edit by hand. (inferred from the choice of format)
