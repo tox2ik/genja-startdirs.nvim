@@ -39,16 +39,31 @@ local function home()
 	return (h:gsub('\\', '/'))
 end
 
+--- Key for comparing paths: case-insensitive on Windows.
+---@param path string
+---@return string
+local function same_key(path)
+	if vim.fn.has('win32') == 1 then
+		return path:lower()
+	end
+	return path
+end
+
+--- Prefix names and their dirs, forward slashes: config and data first (they sit under home).
+---@return { [1]: string, [2]: string }[]
+local function prefixes()
+	return {
+		{ 'CONFIG', vim.fs.normalize(vim.fn.stdpath('config')) },
+		{ 'DATA', vim.fs.normalize(vim.fn.stdpath('data')) },
+		{ 'HOME', home() },
+	}
+end
+
 --- `CONFIG/`, `DATA/`, `HOME/` (and `~`) at the start of the text become real directories.
 ---@param text string
 ---@return string
 local function expand_prefix(text)
-	local prefixes = {
-		{ 'CONFIG', vim.fn.stdpath('config') },
-		{ 'DATA', vim.fn.stdpath('data') },
-		{ 'HOME', home() },
-	}
-	for _, p in ipairs(prefixes) do
+	for _, p in ipairs(prefixes()) do
 		local name, dir = p[1], p[2]
 		if text == name then
 			return dir
@@ -86,42 +101,20 @@ function M.normalize(path)
 	return p
 end
 
---- The reverse of expand_prefix, for lines written by add(): config and data dirs first
---- (they sit under home), then home.
+--- The reverse of expand_prefix, for lines written by add().
 ---@param path string normalized
 ---@return string
 local function compact(path)
-	local prefixes = {
-		{ 'CONFIG', vim.fs.normalize(vim.fn.stdpath('config')) },
-		{ 'DATA', vim.fs.normalize(vim.fn.stdpath('data')) },
-		{ 'HOME', home() },
-	}
-	local key = path
-	if vim.fn.has('win32') == 1 then
-		key = path:lower()
-	end
-	for _, p in ipairs(prefixes) do
+	local key = same_key(path)
+	for _, p in ipairs(prefixes()) do
 		local name, dir = p[1], p[2]
-		local dkey = dir
-		if vim.fn.has('win32') == 1 then
-			dkey = dir:lower()
-		end
+		local dkey = same_key(dir)
 		if key == dkey then
 			return name
 		end
 		if key:sub(1, #dkey + 1) == dkey .. '/' then
 			return name .. path:sub(#dir + 1)
 		end
-	end
-	return path
-end
-
---- Key for comparing paths: case-insensitive on Windows.
----@param path string
----@return string
-local function same_key(path)
-	if vim.fn.has('win32') == 1 then
-		return path:lower()
 	end
 	return path
 end
@@ -207,11 +200,7 @@ end
 --- Paths only, in file order (see entries()).
 ---@return string[]
 function M.dirs()
-	local out = {}
-	for _, e in ipairs(M.entries()) do
-		table.insert(out, e.path)
-	end
-	return out
+	return vim.tbl_map(function(e) return e.path end, M.entries())
 end
 -- }}}
 
@@ -272,11 +261,8 @@ function M.touch(path)
 	end
 	local usage = read_usage()
 	local key = same_key(M.normalize(path))
+	usage[key] = usage[key] or { count = 0, last = 0 }
 	local u = usage[key]
-	if u == nil then
-		u = { count = 0, last = 0 }
-		usage[key] = u
-	end
 	u.count = u.count + 1
 	u.last = os.time()
 	local lines = {}
@@ -312,11 +298,8 @@ function M.ranked()
 	local score = {}
 	for i, p in ipairs(list) do
 		order[p] = i
-		score[p] = 0
 		local u = usage[same_key(p)]
-		if u then
-			score[p] = u.count * recency(now - u.last)
-		end
+		score[p] = (u and u.count * recency(now - u.last) or 0)
 	end
 	table.sort(list, function(a, b)
 		if score[a] ~= score[b] then
@@ -454,22 +437,16 @@ function M.setup(opts)
 		M.config.dirs = opts.dirs
 	end
 
+	---The command's dir argument, else the cwd.
+	local function dir_arg(o)
+		return (o.args ~= '' and o.args or vim.fn.getcwd())
+	end
 	vim.api.nvim_create_user_command('StartdirsEdit', function() M.edit() end,
 		{ desc = 'Startdirs: edit the file' })
-	vim.api.nvim_create_user_command('StartdirsAdd', function(o)
-		local path = o.args
-		if path == '' then
-			path = vim.fn.getcwd()
-		end
-		M.add(path)
-	end, { nargs = '?', complete = 'dir', desc = 'Startdirs: add a dir (default: cwd)' })
-	vim.api.nvim_create_user_command('StartdirsRemove', function(o)
-		local path = o.args
-		if path == '' then
-			path = vim.fn.getcwd()
-		end
-		M.remove(path)
-	end, { nargs = '?', complete = 'dir', desc = 'Startdirs: remove a dir (default: cwd)' })
+	vim.api.nvim_create_user_command('StartdirsAdd', function(o) M.add(dir_arg(o)) end,
+		{ nargs = '?', complete = 'dir', desc = 'Startdirs: add a dir (default: cwd)' })
+	vim.api.nvim_create_user_command('StartdirsRemove', function(o) M.remove(dir_arg(o)) end,
+		{ nargs = '?', complete = 'dir', desc = 'Startdirs: remove a dir (default: cwd)' })
 end
 
 return M
