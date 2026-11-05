@@ -5,6 +5,19 @@ with group switches, add/remove from the editor, jumps to the most used entries
 and a frecency ranking (use count x recency) for pickers. No picker of its own; callers get the
 list from `dirs()` / `ranked()`.
 
+## Install (lazy.nvim)
+
+```lua
+{
+	'tox2ik/genja-startdirs.nvim',
+	opts = {
+		dirs = { '~', vim.fn.stdpath('config') },
+	},
+}
+```
+
+The options below go in `opts`, or call `setup()` yourself:
+
 ## Setup
 
 ```lua
